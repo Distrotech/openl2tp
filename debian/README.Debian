@@ -1,0 +1,190 @@
+The following was contributed by Alex Bodnaru <alexbodn@012.net.il>.
+
+Here is an example configuration for a network connection based on an 
+openl2tp lac session (i.e. to some isp).
+
+it's installation may be automated.
+
+in /etc/network/interfaces, add a connection like:
+
+auto isp-l2tp-tunnel
+iface isp-l2tp-tunnel inet manual
+    # files to contain commands for connecting and disconnecting to lns
+    tunnel-config ${base_name_for files with extension .up and .down}
+    tunnel-server-ip ${your_lns_ip}
+    default-tunnel yes
+    tunnel-type openl2tp
+    # this could be done automatically if the ppp userpeerdns would be available
+    dns-nameservers ${new dns servers needed for this connection}
+
+example .down file:
+
+# locally created tunnels and sessions
+session delete session_name=${session_name} tunnel_name=${tunnel_name}
+
+tunnel delete tunnel_name=${tunnel_name}
+
+# ppp profiles
+# i'd rather clone the default profile info, in order to make.
+# different tunnels.
+
+#maybe unset that?
+#ppp profile modify profile_name=default \
+#<->auth_none=yes \
+
+
+example .up file:
+
+# ppp profiles
+# i'd rather clone the default profile info, in order to make.
+# different tunnels.
+ppp profile modify profile_name=default \
+    auth_none=yes
+
+# locally created tunnels and sessions
+tunnel create tunnel_name=${tunnel_name} dest_ipaddr=${lns_ipaddr} \
+    persist=yes \
+    ppp_profile_name=${see_above}
+
+session create session_name=${session_name} tunnel_name=${tunnel_name} \
+    ppp_profile_name=${see_above} \
+    user_name=${you_know} \
+    user_password=${only_you_know}
+
+
+in /etc/network/if-down.d/openl2tp-tunnel-down:
+
+#!/bin/sh 
+
+# should model the configuration files, so that the server ip will passed here 
+if [ "${IF_TUNNEL_TYPE}" = "openl2tp" ]; then
+    l2tpconfig config restore file=${IF_TUNNEL_CONFIG}.down
+fi
+
+
+in /etc/network/if-pre-up.d/0000set-tunnel-ip:
+
+#!/bin/sh 
+
+# set the ip of the tunnel and of the default tunnel (if this is the one) 
+
+if [ -n "${IF_TUNNEL_SERVER_IP}" ]; then
+    echo ${IF_TUNNEL_SERVER_IP} > /var/run/ppp-tunnel
+    if [ "${IF_DEFAULT_TUNNEL}" = "yes" ]; then
+        cp /var/run/ppp-tunnel /var/run/ppp-default-tunnel
+    fi
+fi
+
+# set the logical tunnel, so that it may be sorted before it's transport iface 
+echo ${LOGICAL} > /var/run/ppp-tunnel-logical
+
+
+in /etc/network/if-pre-up.d/openl2tp-tunnel-up:
+
+#!/bin/sh 
+
+# should model the configuration files, so that the server ip will be passed here 
+if [ "${IF_TUNNEL_TYPE}" = "openl2tp" ]; then
+    l2tpconfig config restore file=${IF_TUNNEL_CONFIG}.up
+fi
+
+
+in /etc/ppp/ip-down.d/tun-default:
+
+#!/bin/sh 
+# pppd ip-down script for all-to-tunnel routing 
+
+# provided by pppd: interface name 
+TUNNEL=$1
+if [ "${TUNNEL}" = "" ]; then TUNNEL=${PPP_IFACE}; fi
+
+# if we are being called as part of the default tunnel shutdown 
+if [ -f var/run/ppp-default-$TUNNEL-if ]; then
+
+    # read the primary network interface of the default tunnel 
+    PRIMARY="`cat var/run/ppp-default-$TUNNEL-if`"
+    
+    # the tunnel server will be found on the primary network 
+    if [ -f /var/run/ppp-default-$TUNNEL-server ]; then
+        SERVER="`cat var/run/ppp-default-$TUNNEL-server`"
+        route del -host ${SERVER} dev ${PRIMARY}
+        rm /var/run/ppp-default-$TUNNEL-server
+    fi
+    
+    # direct packets back to the original interface 
+    route del default ${TUNNEL}
+    route add default dev ${PRIMARY}
+    
+    # the interface is down, and the next time may be non-default 
+    rm /var/run/ppp-default-$TUNNEL-if
+
+else
+    exit 0
+fi
+
+
+in /etc/ppp/ip-up.d/0000tunnel-set-default:
+
+#!/bin/sh
+# pppd ip-up script for default-tunnel routing
+
+SERVER_FILE=/var/run/ppp-tunnel
+DEFAULT_SERVER_FILE=/var/run/ppp-default-tunnel
+
+# read the primary network interface and server name
+PRIMARY="`route -n | grep ^0.0.0.0 | awk '{print $8}'`"
+# server ip should be saved in the following files during if-pre-up
+SERVER="`cat ${SERVER_FILE}`"
+[ -z $SERVER ] && exit 0
+rm ${SERVER_FILE}
+
+DEFAULT_SERVER="`cat ${DEFAULT_SERVER_FILE}`"
+rm -f ${DEFAULT_SERVER_FILE}
+
+# if we are being called as part of the default tunnel startup
+if [ $SERVER = $DEFAULT_SERVER ]; then
+  # provided by pppd: interface name
+  TUNNEL=$1
+  if [ "${TUNNEL}" = "" ]; then TUNNEL=${PPP_IFACE}; fi
+
+  echo $PRIMARY > /var/run/ppp-default-$TUNNEL-if
+  
+  # direct tunnel control packets to the tunnel server
+  if [ -z "`route -n | awk -v PEERIP=${SERVER} '{if ($1==PEERIP && $4=="UH") {print "exist";}}'`" ]; then
+	route add -host ${SERVER} dev ${PRIMARY}
+	echo ${SERVER} > /var/run/ppp-default-$TUNNEL-server
+  fi
+
+  # direct all other packets into the tunnel
+  route del default ${PRIMARY}
+  route add default dev ${TUNNEL}
+fi
+
+# define tunnel<->transport relationship:
+# tunnels should go down before their transport iface
+
+LOGICAL_FILE=/var/run/ppp-tunnel-logical
+LOGICAL="`cat ${LOGICAL_FILE}`"
+rm -f ${LOGICAL_FILE}
+
+PRIMARY="`route -n | grep ^0.0.0.0 | awk '{print $8}'`"
+
+# ifstate manipulation:
+# make the physical=logical interface
+# put this interface after the primary one
+
+IFSTATE=/etc/network/run/ifstate
+TMP_IFSTATE=/var/run/ifstate.${LOGICAL}
+cp ${IFSTATE} > ${TMP_IFSTATE}
+cat ${TMP_IFSTATE} |
+awk -F= -v LOGICAL=${LOGICAL} -v PHYSICAL=${PPP_IFACE} -v PRIMARY=${PRIMARY} '{ \
+  if ($1 != LOGICAL && $2 != LOGICAL) \
+  { \
+	if ($1 == PRIMARY) \
+	{ \
+	  print PHYSICAL"="LOGICAL;
+	} \
+	print;
+  } \
+}' > ${IFSTATE}
+rm ${TMP_IFSTATE}
