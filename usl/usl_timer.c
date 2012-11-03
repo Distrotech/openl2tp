@@ -88,14 +88,13 @@ void (*usl_timer_tick_hook)(void);
  */
 void usl_timer_tick(void)
 {
-	int result;
 	char msg = '\0';
 
 	usl_tick++;
 
 	if (!usl_tick_pending) {
 		usl_tick_pending = 1;
-		result = write(usl_tick_pipe[1], &msg, sizeof(msg));
+		write(usl_tick_pipe[1], &msg, sizeof(msg));
 	}
 }
 
@@ -112,11 +111,10 @@ static void usl_timer_tick_handler(int fd, void *arg)
 	struct usl_ord_list_head *tmp;
 	struct usl_list_head *iwalk;
 	struct usl_list_head *itmp;
-	int result;
 	char msg;
 	USL_LIST_HEAD(expire_list);
 
-	result = usl_fd_read(usl_tick_pipe[0], &msg, sizeof(msg));
+	usl_fd_read(usl_tick_pipe[0], &msg, sizeof(msg));
 	usl_tick_pending = 0;
 
 	usl_list_for_each(walk, tmp, &usl_timer_list) {

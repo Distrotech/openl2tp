@@ -1675,7 +1675,6 @@ static int l2tp_session_send_cdn(void *tun, void *sess)
 	struct l2tp_avp_desc avps[L2TP_AVP_TYPE_NUM_AVPS];
 	struct l2tp_avp_message_type msg_type;
 	struct l2tp_avp_session_id session_id;
-	struct l2tp_avp_q931_cause_code q931_cause_code;
 	struct l2tp_packet *pkt;
 	int result;
 
@@ -1698,8 +1697,6 @@ static int l2tp_session_send_cdn(void *tun, void *sess)
 
 	/* Now the optional AVPs */
 	if (session->q931_cause_code != NULL) {
-		q931_cause_code.cause_code = session->q931_cause_code->cause_code;
-		q931_cause_code.cause_msg = session->q931_cause_code->cause_msg;
 		avps[L2TP_AVP_TYPE_Q931_CAUSE_CODE].value = (void *) session->q931_cause_code;
 		avps[L2TP_AVP_TYPE_Q931_CAUSE_CODE].value_len = session->q931_cause_code_len;
 	}

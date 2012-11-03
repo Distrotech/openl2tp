@@ -1946,7 +1946,6 @@ static int l2tp_tunnel_check_for_peer_collision(struct l2tp_tunnel *tunnel)
 	struct usl_list_head *tmp;
 	struct l2tp_peer *peer2;
 	struct l2tp_tunnel *tunnel2;
-	struct l2tp_peer *peer;
 
 	/* Handle peer collision. Ref RFC2661 Sect 4.3.3, Tiebreaker AVP.
 	 *
@@ -1969,7 +1968,6 @@ static int l2tp_tunnel_check_for_peer_collision(struct l2tp_tunnel *tunnel)
 	 *
 	 */
 
-	peer = tunnel->my_peer;
 	usl_list_for_each(walk, tmp, &l2tp_tunnel_list) {
 		tunnel2 = usl_list_entry(walk, struct l2tp_tunnel, list);
 		peer2 = tunnel2->my_peer;

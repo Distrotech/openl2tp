@@ -790,7 +790,6 @@ static int l2tp_xprt_sendmsg(struct l2tp_xprt *xprt, struct l2tp_packet *pkt)
 {
 	int result;
 	struct msghdr msg;
-	struct l2tp_peer *peer;
 	struct l2tp_tunnel *tunnel;
 	struct sockaddr_in const *peer_addr;
 
@@ -827,7 +826,6 @@ static int l2tp_xprt_sendmsg(struct l2tp_xprt *xprt, struct l2tp_packet *pkt)
 	 * The socket will be connected as soon as we know the peer's
 	 * port number, which we can derive from his first packet.
 	 */
-	peer = xprt->peer;
 	peer_addr = l2tp_tunnel_get_peer_addr(tunnel);
 	if (!l2tp_tunnel_is_fd_connected(tunnel)) {
 		msg.msg_namelen = sizeof(*peer_addr);
@@ -980,18 +978,13 @@ int l2tp_xprt_get_kernel_fd(struct l2tp_tunnel const *tunnel)
 int l2tp_xprt_send(struct l2tp_xprt *xprt, struct l2tp_packet *pkt)
 {
 	int result = 0;
-	uint8_t *data;
-	struct sockaddr_in const *peer_addr;
 
 	pkt->ns = xprt->ns;
 	pkt->nr = xprt->nr;
 
-	peer_addr = l2tp_tunnel_get_peer_addr(xprt->tunnel);
  	L2TP_DEBUG(L2TP_FUNC, "%s: tunl %hu: pkt=%p len=%d msgtype=%hu", __func__, xprt->tunnel_id, pkt, pkt->total_len, pkt->msg_type);
 	L2TP_DEBUG(L2TP_DATA, "%s: tunl %hu: fd=%d peer=%x/%hu", __func__, xprt->tunnel_id,
 		   l2tp_tunnel_get_fd(xprt->tunnel), ntohl(peer_addr->sin_addr.s_addr), ntohs(peer_addr->sin_port));
-
-	data = pkt->iov[0].iov_base;
 
  	L2TP_DEBUG(L2TP_XPRT, "%s: tunl %hu: pkt=%p len=%d", __func__, xprt->tunnel_id, pkt, pkt->total_len);
 	L2TP_DEBUG(L2TP_DATA, "%s: data=%02x %02x %02x %02x %02x %02x %02x %02x", __func__,
