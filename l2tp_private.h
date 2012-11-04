@@ -812,6 +812,7 @@ extern void l2tp_tunnel_unregister_message_handler(int msg_type);
 extern void l2tp_tunnel_globals_modify(struct l2tp_api_system_msg_data *msg, int *result);
 extern void l2tp_tunnel_globals_get(struct l2tp_api_system_msg_data *msg);
 extern void l2tp_tunnel_close_now(struct l2tp_tunnel *tunnel);
+extern char* l2tp_tunnel_name(struct l2tp_tunnel const *tunnel);
 
 /* l2tp_transport.c */
 struct l2tp_xprt;

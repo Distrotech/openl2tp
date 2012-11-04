@@ -55,6 +55,7 @@
 #endif
 
 #define PPP_UNIX_MAX_PPPD_ARGS				80
+#define PPP_UNIX_PPPD_UNIT_OFFSET			2048
 
 /* should be in system's socket.h */
 #ifndef SOL_PPPOL2TP
@@ -799,7 +800,7 @@ static int ppp_unix_pppd_spawn(struct ppp_context *ppp)
 {
 	pid_t pid;
 	int result = 0;
-	char str[10];
+	char str[20];
 	struct l2tp_session_config const *scfg;
 
 	pid = usl_pid_safe_fork();
@@ -996,6 +997,17 @@ static int ppp_unix_pppd_spawn(struct ppp_context *ppp)
 				argv[arg++] = ppp->interface_name;
 			}
 		}
+		argv[arg++] = "ipparam";
+		char *tunnel_name = l2tp_tunnel_name(ppp->tunnel);
+		if (tunnel_name != NULL) {
+			sprintf(&str[0], "l2tp-%s", tunnel_name);
+			argv[arg++] = strdup(str);
+		} else {
+			argv[arg++]="l2tp";
+		}
+		argv[arg++] = "unit";
+		sprintf(&str[0], "%d", PPP_UNIX_PPPD_UNIT_OFFSET+ppp_unix_active_pppd_count-1);
+		argv[arg++] = strdup(str);
 
 		argv[arg++] = NULL;
 

@@ -4551,6 +4551,10 @@ out:
 }
 
 
+extern char* l2tp_tunnel_name(struct l2tp_tunnel const *tunnel) {
+	return tunnel->config.tunnel_name;
+}
+
 /*****************************************************************************
  * Init and cleanup
  *****************************************************************************/
