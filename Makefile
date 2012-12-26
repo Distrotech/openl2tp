@@ -29,27 +29,7 @@ L2TP_USE_ASYNC_RPC=	y
 # Build for UML environment?
 # UML_TARGET=		y
 
-# Location of shared libs. This is usually /usr/lib, but can be
-# /usr/lib32 or /usr/lib64 on 64-bit multi-arch systems. On 64-bit
-# systems which don't have 32-bit multi-arch libs installed, the
-# standard says build with /usr/lib. But Fedora uses /usr/lib64. We
-# try to handle these cases by deriving the CPU architecture
-# name. Things are made more complicated by the fact that the CPU
-# architecture is output by either uname -m or uname -p, depending on
-# uname version. Override SYS_LIBDIR from the command line when
-# necessary.
 SYS_LIBDIR=/usr/lib
-ifeq ($(CROSS_COMPILE),)
- ifeq ($(strip $(wildcard /etc/debian_version*)),)
-  ifeq ($(shell uname -p),x86_64)
-  SYS_LIBDIR=/usr/lib64
-  else
-   ifeq ($(shell uname -m),x86_64)
-   SYS_LIBDIR=/usr/lib64
-   endif
-  endif
- endif
-endif
 
 # Points to pppd install.  By default, pppd headers are assumed to be
 # in the pppd subdirectory of the compiler's default search path
