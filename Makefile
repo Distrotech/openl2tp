@@ -3,7 +3,7 @@
 # Compile-time features
 L2TP_FEATURE_LAC_SUPPORT=	y
 L2TP_FEATURE_LNS_SUPPORT=	y
-L2TP_FEATURE_RPC_MANAGEMENT=	n
+L2TP_FEATURE_RPC_MANAGEMENT=	y
 L2TP_FEATURE_LAIC_SUPPORT=	y
 L2TP_FEATURE_LAOC_SUPPORT=	y
 L2TP_FEATURE_LNIC_SUPPORT=	y
@@ -134,7 +134,7 @@ endif
 
 CPPFLAGS=		$(CPPFLAGS.l2tptest) $(CPPFLAGS-y)
 CFLAGS=			-I. -Iusl -Icli -isystem include \
-				-MMD -Wall -Werror -Wno-strict-aliasing \
+				-MMD -Wall -Wno-strict-aliasing \
 				$(CPPFLAGS) $(CPPFLAGS.dmalloc) \
 				-DSYS_LIBDIR=$(SYS_LIBDIR)
 LDFLAGS.l2tpd=		-Wl,-E -L. -Lusl -lusl -ldl $(LIBS.dmalloc) -lc
@@ -246,10 +246,10 @@ TAGS:
 			etags $(wildcard *.c) $(wildcard *.h)
 
 openl2tpd:		$(L2TPD_SRCS.o)
-			$(CC) -o $@ $^ $(LDFLAGS.l2tpd)
+			$(CC) -o $@ $^ $(LDFLAGS.l2tpd) -ltirpc -lportablexdr
 
 l2tpconfig:		$(L2TPCONFIG_SRCS.o)
-			$(CC) -o $@ $^ $(LDFLAGS.l2tpconfig)
+			$(CC) -o $@ $^ $(LDFLAGS.l2tpconfig) -ltirpc -lportablexdr -lncursesw
 
 %.o:	%.c
 			$(CC) -c $(CFLAGS) $< -o $@
