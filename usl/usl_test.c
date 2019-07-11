@@ -23,6 +23,7 @@
  */
 
 #include <stdio.h>
+#include <string.h>
 
 #include "usl_list.h"
 
@@ -165,4 +166,6 @@ int main(int argc, char **argv)
 		result = test->func(test->arg);
 		printf("TEST: %s: %s\n", test->name, result == 0 ? "PASS" : "FAIL");
 	}
+
+	return 0;
 }
